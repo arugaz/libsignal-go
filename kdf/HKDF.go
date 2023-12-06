@@ -4,9 +4,10 @@ package kdf
 
 import (
 	"crypto/sha256"
+	"io"
+
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
-	"io"
 )
 
 // HKDF is a hashed key derivation function type that can be used to derive keys.

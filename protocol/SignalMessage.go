@@ -3,15 +3,17 @@ package protocol
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"errors"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/identity"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"github.com/RadicalApp/libsignal-protocol-go/util/bytehelper"
+	"fmt"
 	"strconv"
+
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/keys/identity"
+	"github.com/arugaz/libsignal/logger"
+	"github.com/arugaz/libsignal/signalerror"
+	"github.com/arugaz/libsignal/util/bytehelper"
 )
 
-const macLength int = 8
+const MacLength int = 8
 
 // SignalMessageSerializer is an interface for serializing and deserializing
 // SignalMessages into bytes. An implementation of this interface should be
@@ -38,20 +40,17 @@ func NewSignalMessageFromBytes(serialized []byte, serializer SignalMessageSerial
 func NewSignalMessageFromStruct(structure *SignalMessageStructure, serializer SignalMessageSerializer) (*SignalMessage, error) {
 	// Throw an error if the given message structure is an unsupported version.
 	if structure.Version <= UnsupportedVersion {
-		err := "Legacy message: " + strconv.Itoa(structure.Version)
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w %d (normal message)", signalerror.ErrOldMessageVersion, structure.Version)
 	}
 
 	// Throw an error if the given message structure is a future version.
 	if structure.Version > CurrentVersion {
-		err := "Unknown version: " + strconv.Itoa(structure.Version)
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w %d (normal message)", signalerror.ErrUnknownMessageVersion, structure.Version)
 	}
 
 	// Throw an error if the structure is missing critical fields.
 	if structure.CipherText == nil || structure.RatchetKey == nil {
-		err := "Incomplete message."
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w (normal message)", signalerror.ErrIncompleteMessage)
 	}
 
 	// Create the signal message object from the structure.
@@ -72,24 +71,26 @@ func NewSignalMessage(messageVersion int, counter, previousCounter uint32, macKe
 	senderRatchetKey ecc.ECPublicKeyable, ciphertext []byte, senderIdentityKey,
 	receiverIdentityKey *identity.Key, serializer SignalMessageSerializer) (*SignalMessage, error) {
 
+	version := []byte(strconv.Itoa(messageVersion))
 	// Build the signal message structure with the given data.
 	structure := &SignalMessageStructure{
-		Version:         messageVersion,
 		Counter:         counter,
 		PreviousCounter: previousCounter,
 		RatchetKey:      senderRatchetKey.Serialize(),
 		CipherText:      ciphertext,
 	}
 
+	serialized := append(version, serializer.Serialize(structure)...)
 	// Get the message authentication code from the serialized structure.
 	mac, err := getMac(
 		messageVersion, senderIdentityKey, receiverIdentityKey,
-		macKey, serializer.Serialize(structure),
+		macKey, serialized,
 	)
 	if err != nil {
 		return nil, err
 	}
 	structure.Mac = mac
+	structure.Version = messageVersion
 
 	// Generate a SignalMessage with the structure.
 	whisperMessage, err := NewSignalMessageFromStruct(structure, serializer)
@@ -155,6 +156,9 @@ func (s *SignalMessage) VerifyMac(messageVersion int, senderIdentityKey,
 		return err
 	}
 	signalMessage.structure.Mac = nil
+	signalMessage.structure.Version = 0
+	version := []byte(strconv.Itoa(s.MessageVersion()))
+	serialized := append(version, signalMessage.Serialize()...)
 
 	// Calculate the message authentication code from the serialized structure.
 	ourMac, err := getMac(
@@ -162,7 +166,7 @@ func (s *SignalMessage) VerifyMac(messageVersion int, senderIdentityKey,
 		senderIdentityKey,
 		receiverIdentityKey,
 		macKey,
-		signalMessage.Serialize(),
+		serialized,
 	)
 	if err != nil {
 		logger.Error(err)
@@ -179,7 +183,7 @@ func (s *SignalMessage) VerifyMac(messageVersion int, senderIdentityKey,
 
 	// Return an error if our calculated mac doesn't match the mac sent to us.
 	if !hmac.Equal(ourMac, theirMac) {
-		return errors.New("Bad Mac!")
+		return signalerror.ErrBadMAC
 	}
 
 	return nil
@@ -218,5 +222,5 @@ func getMac(messageVersion int, senderIdentityKey, receiverIdentityKey *identity
 
 	fullMac := mac.Sum(nil)
 
-	return bytehelper.Trim(fullMac, macLength), nil
+	return bytehelper.Trim(fullMac, MacLength), nil
 }

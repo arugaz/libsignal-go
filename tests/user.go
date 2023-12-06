@@ -1,13 +1,13 @@
 package tests
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/groups"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/identity"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"github.com/RadicalApp/libsignal-protocol-go/serialize"
-	"github.com/RadicalApp/libsignal-protocol-go/session"
-	"github.com/RadicalApp/libsignal-protocol-go/state/record"
-	"github.com/RadicalApp/libsignal-protocol-go/util/keyhelper"
+	"github.com/arugaz/libsignal/groups"
+	"github.com/arugaz/libsignal/keys/identity"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/serialize"
+	"github.com/arugaz/libsignal/session"
+	"github.com/arugaz/libsignal/state/record"
+	"github.com/arugaz/libsignal/util/keyhelper"
 )
 
 // user is a structure for a signal user.
@@ -60,7 +60,7 @@ func newUser(name string, deviceID uint32, serializer *serialize.Serializer) *us
 	signalUser.registrationID = keyhelper.GenerateRegistrationID()
 
 	// Generate PreKeys
-	signalUser.preKeys, _ = keyhelper.GeneratePreKeys(0, 100, serializer.PreKeyRecord)
+	signalUser.preKeys, _ = keyhelper.GeneratePreKeys(1, 100, serializer.PreKeyRecord)
 
 	// Generate Signed PreKey
 	signalUser.signedPreKey, _ = keyhelper.GenerateSignedPreKey(signalUser.identityKeyPair, 0, serializer.SignedPreKeyRecord)

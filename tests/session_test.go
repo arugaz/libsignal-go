@@ -1,12 +1,13 @@
 package tests
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/keys/prekey"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"github.com/RadicalApp/libsignal-protocol-go/serialize"
-	"github.com/RadicalApp/libsignal-protocol-go/session"
 	"testing"
+
+	"github.com/arugaz/libsignal/keys/prekey"
+	"github.com/arugaz/libsignal/logger"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/serialize"
+	"github.com/arugaz/libsignal/session"
 )
 
 // TestSessionBuilder checks building of a session.
@@ -67,18 +68,10 @@ func TestSessionBuilder(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Create a session builder
-	logger.Debug("Building receiver's (Bob) session...")
-	unsignedPreKeyID, err := bob.sessionBuilder.Process(receivedMessage)
-	if err != nil {
-		logger.Error("Unable to process prekeysignal message: ", err)
-		t.FailNow()
-	}
-	logger.Debug("Got PreKeyID: ", unsignedPreKeyID)
-
 	// Try and decrypt the message
 	bobSessionCipher := session.NewCipher(bob.sessionBuilder, alice.address)
-	msg, err := bobSessionCipher.Decrypt(receivedMessage.WhisperMessage())
+
+	msg, err := bobSessionCipher.DecryptMessage(receivedMessage)
 	if err != nil {
 		logger.Error("Unable to decrypt message: ", err)
 		t.FailNow()
@@ -161,14 +154,14 @@ func TestSessionRoundtrip(t *testing.T) {
 
 	///////////// RECEIVER SESSION CREATION ///////////////
 
-	// Create a session builder
-	logger.Debug("Building receiver's (Bob) session...")
-	unsignedPreKeyID, err := bob.sessionBuilder.Process(aliceMessages1[0].(*protocol.PreKeySignalMessage))
-	if err != nil {
-		logger.Error("Unable to process prekeysignal message: ", err)
-		t.FailNow()
-	}
-	logger.Debug("Got PreKeyID: ", unsignedPreKeyID)
+	// // Create a session builder
+	// logger.Debug("Building receiver's (Bob) session...")
+	// unsignedPreKeyID, err := bob.sessionBuilder.Process(aliceMessages1[0].(*protocol.PreKeySignalMessage))
+	// if err != nil {
+	// 	logger.Error("Unable to process prekeysignal message: ", err)
+	// 	t.FailNow()
+	// }
+	// logger.Debug("Got PreKeyID: ", unsignedPreKeyID)
 
 	// Try and decrypt the message
 	bobSessionCipher := session.NewCipher(bob.sessionBuilder, alice.address)
@@ -241,14 +234,14 @@ func TestSessionOutOfOrder(t *testing.T) {
 
 	///////////// RECEIVER SESSION CREATION ///////////////
 
-	// Create a session builder
-	logger.Debug("Building receiver's (Bob) session...")
-	unsignedPreKeyID, err := bob.sessionBuilder.Process(aliceMessages[3].(*protocol.PreKeySignalMessage))
-	if err != nil {
-		logger.Error("Unable to process prekeysignal message: ", err)
-		t.FailNow()
-	}
-	logger.Debug("Got PreKeyID: ", unsignedPreKeyID)
+	// // Create a session builder
+	// logger.Debug("Building receiver's (Bob) session...")
+	// unsignedPreKeyID, err := bob.sessionBuilder.Process(aliceMessages[3].(*protocol.PreKeySignalMessage))
+	// if err != nil {
+	// 	logger.Error("Unable to process prekeysignal message: ", err)
+	// 	t.FailNow()
+	// }
+	// logger.Debug("Got PreKeyID: ", unsignedPreKeyID)
 
 	// Try and decrypt the message
 	bobSessionCipher := session.NewCipher(bob.sessionBuilder, alice.address)
@@ -325,7 +318,12 @@ func encryptMessage(message string, cipher *session.Cipher, serializer *serializ
 func decryptMessage(message protocol.CiphertextMessage, cipher *session.Cipher, t *testing.T) string {
 	switch message.(type) {
 	case *protocol.PreKeySignalMessage:
-		return decryptMessage(message.(*protocol.PreKeySignalMessage).WhisperMessage(), cipher, t)
+		plain, err := cipher.DecryptMessage(message.(*protocol.PreKeySignalMessage))
+		if err != nil {
+			logger.Error("Unable to decrypt prekey message: ", err)
+			t.FailNow()
+		}
+		return string(plain)
 	}
 
 	msg, err := cipher.Decrypt(message.(*protocol.SignalMessage))

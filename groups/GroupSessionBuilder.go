@@ -9,11 +9,11 @@
 package groups
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/groups/state/record"
-	"github.com/RadicalApp/libsignal-protocol-go/groups/state/store"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"github.com/RadicalApp/libsignal-protocol-go/serialize"
-	"github.com/RadicalApp/libsignal-protocol-go/util/keyhelper"
+	"github.com/arugaz/libsignal/groups/state/record"
+	"github.com/arugaz/libsignal/groups/state/store"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/serialize"
+	"github.com/arugaz/libsignal/util/keyhelper"
 )
 
 // NewGroupSessionBuilder will return a new group session builder.

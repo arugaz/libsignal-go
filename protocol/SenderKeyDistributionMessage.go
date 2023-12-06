@@ -1,9 +1,10 @@
 package protocol
 
 import (
-	"errors"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"strconv"
+	"fmt"
+
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/signalerror"
 )
 
 // SenderKeyDistributionMessageSerializer is an interface for serializing and deserializing
@@ -35,20 +36,17 @@ func NewSenderKeyDistributionMessageFromStruct(structure *SenderKeyDistributionM
 
 	// Throw an error if the given message structure is an unsupported version.
 	if structure.Version <= UnsupportedVersion {
-		err := "Legacy message: " + strconv.Itoa(int(structure.Version))
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w %d (sender key distribution)", signalerror.ErrOldMessageVersion, structure.Version)
 	}
 
 	// Throw an error if the given message structure is a future version.
 	if structure.Version > CurrentVersion {
-		err := "Unknown version: " + strconv.Itoa(int(structure.Version))
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w %d (sender key distribution)", signalerror.ErrUnknownMessageVersion, structure.Version)
 	}
 
 	// Throw an error if the structure is missing critical fields.
 	if structure.SigningKey == nil || structure.ChainKey == nil {
-		err := "Incomplete message."
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w (sender key distribution)", signalerror.ErrIncompleteMessage)
 	}
 
 	// Get the signing key object from bytes.

@@ -2,12 +2,12 @@ package tests
 
 import (
 	"fmt"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/prekey"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"github.com/RadicalApp/libsignal-protocol-go/session"
-	"github.com/RadicalApp/libsignal-protocol-go/state/record"
-	"github.com/kr/pretty"
 	"testing"
+
+	"github.com/arugaz/libsignal/keys/prekey"
+	"github.com/arugaz/libsignal/logger"
+	"github.com/arugaz/libsignal/session"
+	"github.com/arugaz/libsignal/state/record"
 )
 
 // TestSerializing tests serialization and deserialization of Signal objects.
@@ -57,7 +57,7 @@ func TestSerializing(t *testing.T) {
 		t.FailNow()
 	}
 
-	fmt.Printf("Original Session Record: %# v\n", pretty.Formatter(loadedSession))
-	fmt.Printf("Deserialized Session Record: %# v\n", pretty.Formatter(deserializedSession))
+	fmt.Printf("Original Session Record: %+v\n", loadedSession)
+	fmt.Printf("Deserialized Session Record: %+v\n", deserializedSession)
 
 }

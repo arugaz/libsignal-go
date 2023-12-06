@@ -1,7 +1,7 @@
 package identity
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
+	"github.com/arugaz/libsignal/ecc"
 )
 
 // NewKeyPair returns a new identity key with the given public and private keys.

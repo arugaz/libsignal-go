@@ -1,12 +1,13 @@
 package tests
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/keys/message"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/prekey"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"github.com/RadicalApp/libsignal-protocol-go/session"
 	"testing"
+
+	"github.com/arugaz/libsignal/keys/message"
+	"github.com/arugaz/libsignal/keys/prekey"
+	"github.com/arugaz/libsignal/logger"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/session"
 )
 
 // TestSavedMessageKeys tests the ability to save message keys for use in
@@ -68,18 +69,9 @@ func TestSavedMessageKeys(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Create a session builder
-	logger.Debug("Building receiver's (Bob) session...")
-	unsignedPreKeyID, err := bob.sessionBuilder.Process(receivedMessage)
-	if err != nil {
-		logger.Error("Unable to process prekeysignal message: ", err)
-		t.FailNow()
-	}
-	logger.Debug("Got PreKeyID: ", unsignedPreKeyID)
-
 	// Try and decrypt the message and get the message key.
 	bobSessionCipher := session.NewCipher(bob.sessionBuilder, alice.address)
-	msg, key, err := bobSessionCipher.DecryptAndGetKey(receivedMessage.WhisperMessage())
+	msg, key, err := bobSessionCipher.DecryptMessageReturnKey(receivedMessage)
 	if err != nil {
 		logger.Error("Unable to decrypt message: ", err)
 		t.FailNow()

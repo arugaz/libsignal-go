@@ -1,11 +1,11 @@
 package record
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/kdf"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/chain"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/message"
-	"github.com/RadicalApp/libsignal-protocol-go/util/bytehelper"
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/kdf"
+	"github.com/arugaz/libsignal/keys/chain"
+	"github.com/arugaz/libsignal/keys/message"
+	"github.com/arugaz/libsignal/util/bytehelper"
 )
 
 // NewReceiverChainPair will return a new ReceiverChainPair object.

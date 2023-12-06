@@ -130,24 +130,14 @@ func (r *Session) PreviousSessionStates() []*State {
 // base key exists in the current and previous states.
 func (r *Session) HasSessionState(version int, senderBaseKey []byte) bool {
 	// Ensure the session state version is identical to this one.
-	if r.sessionState.Version() == version {
-		return false
-	}
-
-	// Ensure the session state has a sender base key.
-	if r.sessionState.SenderBaseKey() == nil {
-		return false
-	}
-
-	// Check our session state and compare the base key to this base key.
-	if bytes.Compare(senderBaseKey, r.sessionState.SenderBaseKey()) == 0 {
+	if r.sessionState.Version() == version && (bytes.Compare(senderBaseKey, r.sessionState.SenderBaseKey()) == 0) {
 		return true
 	}
 
 	// Loop through all of our previous states and see if this
 	// exists in our state.
 	for i := range r.previousStates {
-		if bytes.Compare(senderBaseKey, r.previousStates[i].SenderBaseKey()) == 0 {
+		if r.previousStates[i].Version() == version && bytes.Compare(senderBaseKey, r.previousStates[i].SenderBaseKey()) == 0 {
 			return true
 		}
 	}
@@ -177,7 +167,7 @@ func (r *Session) PromoteState(promotedState *State) {
 // Serialize will return the session as serialized bytes so it can be
 // persistently stored.
 func (r *Session) Serialize() []byte {
-	return r.serializer.Serialize(r.structure())
+	return r.serializer.Serialize(r.Structure())
 }
 
 // prependStates takes an array/slice of states and prepends it with
@@ -192,10 +182,10 @@ func (r *Session) removeLastState(states []*State) []*State {
 	return states[:len(states)-1]
 }
 
-// structure will return a simple serializable session structure
+// Structure will return a simple serializable session structure
 // from the given structure. This is used for serialization to persistently
 // store a session record.
-func (r *Session) structure() *SessionStructure {
+func (r *Session) Structure() *SessionStructure {
 	previousStates := make([]*StateStructure, len(r.previousStates))
 	for i := range r.previousStates {
 		previousStates[i] = r.previousStates[i].structure()

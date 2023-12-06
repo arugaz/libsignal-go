@@ -2,24 +2,20 @@
 package session
 
 import (
-	"errors"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/prekey"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"github.com/RadicalApp/libsignal-protocol-go/ratchet"
-	"github.com/RadicalApp/libsignal-protocol-go/serialize"
-	"github.com/RadicalApp/libsignal-protocol-go/state/record"
-	"github.com/RadicalApp/libsignal-protocol-go/state/store"
-	"github.com/RadicalApp/libsignal-protocol-go/util/medium"
-	"github.com/RadicalApp/libsignal-protocol-go/util/optional"
-)
+	"fmt"
 
-// Define error constants used for error messages.
-const untrustedIdentityError string = "Untrusted identity"
-const noSignedPreKeyError string = "No signed prekey!"
-const invalidSignatureError string = "Invalid signature on device key!"
-const nilOneTimePreKeyError string = "Prekey store returned a nil one time prekey! Was the key already processed?"
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/keys/prekey"
+	"github.com/arugaz/libsignal/logger"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/ratchet"
+	"github.com/arugaz/libsignal/serialize"
+	"github.com/arugaz/libsignal/signalerror"
+	"github.com/arugaz/libsignal/state/record"
+	"github.com/arugaz/libsignal/state/store"
+	"github.com/arugaz/libsignal/util/medium"
+	"github.com/arugaz/libsignal/util/optional"
+)
 
 // NewBuilder constructs a session builder.
 func NewBuilder(sessionStore store.Session, preKeyStore store.PreKey,
@@ -60,9 +56,9 @@ func NewBuilderFromSignal(signalStore store.SignalProtocol,
 // used to encrypt/decrypt messages in that session.
 //
 // Sessions are built from one of three different vectors:
-//   * PreKeyBundle retrieved from a server.
-//   * PreKeySignalMessage received from a client.
-//   * KeyExchangeMessage sent to or received from a client.
+//   - PreKeyBundle retrieved from a server.
+//   - PreKeySignalMessage received from a client.
+//   - KeyExchangeMessage sent to or received from a client.
 //
 // Sessions are constructed per recipientId + deviceId tuple.
 // Remote logical users are identified by their recipientId,
@@ -79,15 +75,12 @@ type Builder struct {
 
 // Process builds a new session from a session record and pre
 // key signal message.
-func (b *Builder) Process(message *protocol.PreKeySignalMessage) (unsignedPreKeyID *optional.Uint32, err error) {
-
-	// Load or create session record for this session.
-	sessionRecord := b.sessionStore.LoadSession(b.remoteAddress)
+func (b *Builder) Process(sessionRecord *record.Session, message *protocol.PreKeySignalMessage) (unsignedPreKeyID *optional.Uint32, err error) {
 
 	// Check to see if the keys are trusted.
 	theirIdentityKey := message.IdentityKey()
 	if !(b.identityKeyStore.IsTrustedIdentity(b.remoteAddress, theirIdentityKey)) {
-		return nil, errors.New(untrustedIdentityError)
+		return nil, signalerror.ErrUntrustedIdentity
 	}
 
 	// Use version 3 of the signal/axolotl protocol.
@@ -110,19 +103,21 @@ func (b *Builder) processV3(sessionRecord *record.Session,
 	message *protocol.PreKeySignalMessage) (unsignedPreKeyID *optional.Uint32, err error) {
 
 	logger.Debug("Processing message with PreKeyID: ", message.PreKeyID())
-
 	// Check to see if we've already set up a session for this V3 message.
 	sessionExists := sessionRecord.HasSessionState(
 		message.MessageVersion(),
 		message.BaseKey().Serialize(),
 	)
 	if sessionExists {
-		logger.Warning("We've already setup a session for this V3 message, letting bundled message fall through...")
-		return nil, nil
+		logger.Debug("We've already setup a session for this V3 message, letting bundled message fall through...")
+		return optional.NewEmptyUint32(), nil
 	}
 
 	// Load our signed prekey from our signed prekey store.
 	ourSignedPreKeyRecord := b.signedPreKeyStore.LoadSignedPreKey(message.SignedPreKeyID())
+	if ourSignedPreKeyRecord == nil {
+		return nil, fmt.Errorf("%w with ID %d", signalerror.ErrNoSignedPreKey, message.SignedPreKeyID())
+	}
 	ourSignedPreKey := ourSignedPreKeyRecord.KeyPair()
 
 	// Build the parameters of the session.
@@ -135,11 +130,10 @@ func (b *Builder) processV3(sessionRecord *record.Session,
 
 	// Set our one time pre key with the one from our prekey store
 	// if the message contains a valid pre key id
-	if message.PreKeyID() != nil {
+	if !message.PreKeyID().IsEmpty {
 		oneTimePreKey := b.preKeyStore.LoadPreKey(message.PreKeyID().Value)
 		if oneTimePreKey == nil {
-			logger.Error(nilOneTimePreKeyError)
-			return nil, errors.New(nilOneTimePreKeyError)
+			return nil, fmt.Errorf("%w with ID %d", signalerror.ErrNoOneTimeKeyFound, message.PreKeyID().Value)
 		}
 		parameters.SetOurOneTimePreKey(oneTimePreKey.KeyPair())
 	} else {
@@ -170,11 +164,9 @@ func (b *Builder) processV3(sessionRecord *record.Session,
 
 	// Remove the PreKey from our store and return the message prekey id if it is valid.
 	if message.PreKeyID() != nil && message.PreKeyID().Value != medium.MaxValue {
-		logger.Debug("Removing preKey from our prekey store: ", message.PreKeyID().Value)
-		b.preKeyStore.RemovePreKey(message.PreKeyID().Value)
 		return message.PreKeyID(), nil
 	}
-	return nil, nil
+	return optional.NewEmptyUint32(), nil
 }
 
 // ProcessBundle builds a new session from a PreKeyBundle retrieved
@@ -182,12 +174,12 @@ func (b *Builder) processV3(sessionRecord *record.Session,
 func (b *Builder) ProcessBundle(preKey *prekey.Bundle) error {
 	// Check to see if the keys are trusted.
 	if !(b.identityKeyStore.IsTrustedIdentity(b.remoteAddress, preKey.IdentityKey())) {
-		return errors.New(untrustedIdentityError)
+		return signalerror.ErrUntrustedIdentity
 	}
 
 	// Check to see if the bundle has a signed pre key.
 	if preKey.SignedPreKey() == nil {
-		return errors.New(noSignedPreKeyError)
+		return signalerror.ErrNoSignedPreKey
 	}
 
 	// Verify the signature of the pre key
@@ -195,7 +187,7 @@ func (b *Builder) ProcessBundle(preKey *prekey.Bundle) error {
 	preKeyBytes := preKey.SignedPreKey().Serialize()
 	preKeySignature := preKey.SignedPreKeySignature()
 	if !ecc.VerifySignature(preKeyPublic, preKeyBytes, preKeySignature) {
-		return errors.New(invalidSignatureError)
+		return signalerror.ErrInvalidSignature
 	}
 
 	// Load our session and generate keys.

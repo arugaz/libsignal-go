@@ -4,20 +4,21 @@ package ecc
 // See https://moderncrypto.org/mail-archive/curves/2014/000205.html for details.
 
 import (
+	"crypto/ed25519"
 	"crypto/sha512"
 
-	"github.com/agl/ed25519"
-	"github.com/agl/ed25519/edwards25519"
+	"filippo.io/edwards25519"
+	"filippo.io/edwards25519/field"
 )
 
 // sign signs the message with privateKey and returns a signature as a byte slice.
 func sign(privateKey *[32]byte, message []byte, random [64]byte) *[64]byte {
 
 	// Calculate Ed25519 public key from Curve25519 private key
-	var A edwards25519.ExtendedGroupElement
-	var publicKey [32]byte
-	edwards25519.GeScalarMultBase(&A, privateKey)
-	A.ToBytes(&publicKey)
+	var A edwards25519.Point
+	privateKeyScalar, _ := edwards25519.NewScalar().SetBytesWithClamping(privateKey[:])
+	A.ScalarBaseMult(privateKeyScalar)
+	publicKey := *(*[32]byte)(A.Bytes())
 
 	// Calculate r
 	diversifier := [32]byte{
@@ -35,13 +36,13 @@ func sign(privateKey *[32]byte, message []byte, random [64]byte) *[64]byte {
 	hash.Sum(r[:0])
 
 	// Calculate R
-	var rReduced [32]byte
-	edwards25519.ScReduce(&rReduced, &r)
-	var R edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&R, &rReduced)
+	var rReduced *edwards25519.Scalar
+	rReduced, _ = edwards25519.NewScalar().SetUniformBytes(r[:])
+	var R edwards25519.Point
+	R.ScalarBaseMult(rReduced)
 
 	var encodedR [32]byte
-	R.ToBytes(&encodedR)
+	encodedR = *(*[32]byte)(R.Bytes())
 
 	// Calculate S = r + SHA2-512(R || A_ed || msg) * a  (mod L)
 	var hramDigest [64]byte
@@ -50,11 +51,10 @@ func sign(privateKey *[32]byte, message []byte, random [64]byte) *[64]byte {
 	hash.Write(publicKey[:])
 	hash.Write(message)
 	hash.Sum(hramDigest[:0])
-	var hramDigestReduced [32]byte
-	edwards25519.ScReduce(&hramDigestReduced, &hramDigest)
+	hramDigestReduced, _ := edwards25519.NewScalar().SetUniformBytes(hramDigest[:])
 
-	var s [32]byte
-	edwards25519.ScMulAdd(&s, &hramDigestReduced, privateKey, &rReduced)
+	sScalar := edwards25519.NewScalar().MultiplyAdd(hramDigestReduced, privateKeyScalar, rReduced)
+	s := *(*[32]byte)(sScalar.Bytes())
 
 	signature := new([64]byte)
 	copy(signature[:], encodedR[:])
@@ -80,19 +80,18 @@ func verify(publicKey [32]byte, message []byte, signature *[64]byte) bool {
 	Then move the sign bit into the pubkey from the signature.
 	*/
 
-	var edY, one, montX, montXMinusOne, montXPlusOne edwards25519.FieldElement
-	edwards25519.FeFromBytes(&montX, &publicKey)
-	edwards25519.FeOne(&one)
-	edwards25519.FeSub(&montXMinusOne, &montX, &one)
-	edwards25519.FeAdd(&montXPlusOne, &montX, &one)
-	edwards25519.FeInvert(&montXPlusOne, &montXPlusOne)
-	edwards25519.FeMul(&edY, &montXMinusOne, &montXPlusOne)
+	var edY, one, montX, montXMinusOne, montXPlusOne field.Element
+	_, _ = montX.SetBytes(publicKey[:])
+	_ = one.One()
+	montXMinusOne.Subtract(&montX, &one)
+	montXPlusOne.Add(&montX, &one)
+	montXPlusOne.Invert(&montXPlusOne)
+	edY.Multiply(&montXMinusOne, &montXPlusOne)
 
-	var A_ed [32]byte
-	edwards25519.FeToBytes(&A_ed, &edY)
+	A_ed := *(*[32]byte)(edY.Bytes())
 
 	A_ed[31] |= signature[63] & 0x80
 	signature[63] &= 0x7F
 
-	return ed25519.Verify(&A_ed, message, signature)
+	return ed25519.Verify(A_ed[:], message, signature[:])
 }

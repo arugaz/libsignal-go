@@ -1,8 +1,8 @@
 package ratchet
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/identity"
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/keys/identity"
 )
 
 // NewSenderParameters creates a structure with all the keys needed to construct

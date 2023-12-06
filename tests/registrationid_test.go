@@ -2,8 +2,9 @@ package tests
 
 import (
 	"fmt"
-	"github.com/RadicalApp/libsignal-protocol-go/util/keyhelper"
 	"testing"
+
+	"github.com/arugaz/libsignal/util/keyhelper"
 )
 
 func TestRegistrationID(t *testing.T) {

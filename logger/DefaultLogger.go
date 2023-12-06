@@ -15,7 +15,7 @@ type defaultLogger struct {
 // caller is allowed to log.
 func (d *defaultLogger) log(level, caller, msg string) {
 	if !d.shouldLog(caller) {
-		return
+		// return
 	}
 	t := time.Now()
 	fmt.Println(
@@ -54,7 +54,7 @@ func (d *defaultLogger) ensureNamespaces() {
 
 // Debug is used to log debug messages.
 func (d *defaultLogger) Debug(caller, msg string) {
-	d.log("DEBUG", caller, msg)
+	//d.log("DEBUG", caller, msg)
 }
 
 // Info is used to log info messages.
@@ -77,9 +77,9 @@ func (d *defaultLogger) Error(caller, msg string) {
 // allows granular logging of different go files.
 //
 // Example:
-//   logger.Configure("RootKey.go,Curve.go")
-//   logger.Configure("all")
 //
+//	logger.Configure("RootKey.go,Curve.go")
+//	logger.Configure("all")
 func (d *defaultLogger) Configure(settings string) {
 	d.namespaces = strings.Split(settings, ",")
 }

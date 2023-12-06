@@ -1,12 +1,12 @@
 package tests
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/serialize"
+	"github.com/arugaz/libsignal/serialize"
 )
 
 // newSerializer will return a JSON serializer for testing.
 func newSerializer() *serialize.Serializer {
-	serializer := serialize.NewJSONSerializer()
+	serializer := serialize.NewProtoBufSerializer()
 
 	return serializer
 }

@@ -1,9 +1,9 @@
 package record
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/groups/ratchet"
-	"github.com/RadicalApp/libsignal-protocol-go/util/bytehelper"
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/groups/ratchet"
+	"github.com/arugaz/libsignal/util/bytehelper"
 )
 
 const maxMessageKeys = 2000
@@ -173,11 +173,14 @@ func (k *SenderKeyState) structure() *SenderKeyStateStructure {
 	}
 
 	// Build and return our state structure.
-	return &SenderKeyStateStructure{
-		Keys:              keys,
-		KeyID:             k.keyID,
-		SenderChainKey:    ratchet.NewStructFromSenderChainKey(k.senderChainKey),
-		SigningKeyPrivate: bytehelper.ArrayToSlice(k.signingKeyPair.PrivateKey().Serialize()),
-		SigningKeyPublic:  k.signingKeyPair.PublicKey().Serialize(),
+	s := &SenderKeyStateStructure{
+		Keys:             keys,
+		KeyID:            k.keyID,
+		SenderChainKey:   ratchet.NewStructFromSenderChainKey(k.senderChainKey),
+		SigningKeyPublic: k.signingKeyPair.PublicKey().Serialize(),
 	}
+	if k.signingKeyPair.PrivateKey() != nil {
+		s.SigningKeyPrivate = bytehelper.ArrayToSlice(k.signingKeyPair.PrivateKey().Serialize())
+	}
+	return s
 }

@@ -5,6 +5,11 @@ type CiphertextMessage interface {
 	Type() uint32
 }
 
+type GroupCiphertextMessage interface {
+	CiphertextMessage
+	SignedSerialize() []byte
+}
+
 const UnsupportedVersion = 1
 const CurrentVersion = 3
 

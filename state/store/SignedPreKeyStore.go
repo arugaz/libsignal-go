@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/state/record"
+	"github.com/arugaz/libsignal/state/record"
 )
 
 // SignedPreKey store is an interface that describes how to persistently

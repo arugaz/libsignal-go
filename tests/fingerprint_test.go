@@ -2,8 +2,9 @@ package tests
 
 import (
 	"fmt"
-	"github.com/RadicalApp/libsignal-protocol-go/fingerprint"
 	"testing"
+
+	"github.com/arugaz/libsignal/fingerprint"
 )
 
 // TestFingerprint will test printing key fingerprints.

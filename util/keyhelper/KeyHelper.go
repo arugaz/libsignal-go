@@ -4,11 +4,11 @@ package keyhelper
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"github.com/RadicalApp/complete"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/identity"
-	"github.com/RadicalApp/libsignal-protocol-go/state/record"
 	"time"
+
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/keys/identity"
+	"github.com/arugaz/libsignal/state/record"
 )
 
 // GenerateIdentityKeyPair generates an identity keypair used for
@@ -23,19 +23,6 @@ func GenerateIdentityKeyPair() (*identity.KeyPair, error) {
 	return identity.NewKeyPair(publicKey, keyPair.PrivateKey()), nil
 }
 
-// GenerateIdentityKeyPairAsync generates an identity keypair asyncronously.
-func GenerateIdentityKeyPairAsync(completion complete.Completionable) {
-	go func() {
-		r, err := GenerateIdentityKeyPair()
-		if err != nil {
-			completion.OnFailure(err.Error())
-			return
-		}
-		result := complete.NewResult(r)
-		completion.OnSuccess(&result)
-	}()
-}
-
 // GeneratePreKeys generates a list of PreKeys. Client shsould do this at
 // install time, and subsequently any time the list of PreKeys stored on
 // the server runs low.
@@ -46,9 +33,7 @@ func GenerateIdentityKeyPairAsync(completion complete.Completionable) {
 func GeneratePreKeys(start int, count int, serializer record.PreKeySerializer) ([]*record.PreKey, error) {
 	var preKeys []*record.PreKey
 
-	start--
-
-	for i := 0; i < count; i++ {
+	for i := start; i <= count; i++ {
 		key, err := ecc.GenerateKeyPair()
 		if err != nil {
 			return nil, err

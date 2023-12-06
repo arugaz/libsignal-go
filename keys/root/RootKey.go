@@ -3,10 +3,10 @@
 package root
 
 import (
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/kdf"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/chain"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/session"
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/kdf"
+	"github.com/arugaz/libsignal/keys/chain"
+	"github.com/arugaz/libsignal/keys/session"
 )
 
 // DerivedSecretsSize is the size of the derived secrets for root keys.
@@ -39,14 +39,12 @@ func (k *Key) Bytes() []byte {
 
 // CreateChain creates a new RootKey and ChainKey from the recipient's ratchet key and our private key.
 func (k *Key) CreateChain(theirRatchetKey ecc.ECPublicKeyable, ourRatchetKey *ecc.ECKeyPair) (*session.KeyPair, error) {
-	var keyMaterial []byte
 	theirPublicKey := theirRatchetKey.PublicKey()
 	ourPrivateKey := ourRatchetKey.PrivateKey().Serialize()
 
 	// Use our key derivation function to calculate a shared secret.
 	sharedSecret := kdf.CalculateSharedSecret(theirPublicKey, ourPrivateKey)
-	copy(keyMaterial[:], sharedSecret[:])
-	derivedSecretBytes, err := kdf.DeriveSecrets(keyMaterial, k.key, []byte(KdfInfo), DerivedSecretsSize)
+	derivedSecretBytes, err := kdf.DeriveSecrets(sharedSecret[:], k.key, []byte(KdfInfo), DerivedSecretsSize)
 	if err != nil {
 		return nil, err
 	}

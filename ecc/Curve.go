@@ -3,14 +3,18 @@ package ecc
 import (
 	"crypto/rand"
 	"errors"
-	"github.com/RadicalApp/complete"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"golang.org/x/crypto/curve25519"
+	"fmt"
 	"io"
+
+	"golang.org/x/crypto/curve25519"
+
+	"github.com/arugaz/libsignal/logger"
 )
 
 // DjbType is the Diffie-Hellman curve type (curve25519) created by D. J. Bernstein.
 const DjbType = 0x05
+
+var ErrBadKeyType = errors.New("bad key type")
 
 // DecodePoint will take the given bytes and offset and return an ECPublicKeyable object.
 // This is used to check the byte at the given offset in the byte array for a special
@@ -24,13 +28,32 @@ func DecodePoint(bytes []byte, offset int) (ECPublicKeyable, error) {
 		copy(keyBytes[:], bytes[offset+1:])
 		return NewDjbECPublicKey(keyBytes), nil
 	default:
-		return nil, errors.New("Bad key type: " + string(keyType))
+		return nil, fmt.Errorf("%w %d", ErrBadKeyType, keyType)
 	}
+}
+
+func CreateKeyPair(privateKey []byte) *ECKeyPair {
+	var private, public [32]byte
+	copy(private[:], privateKey)
+
+	private[0] &= 248
+	private[31] &= 127
+	private[31] |= 64
+
+	curve25519.ScalarBaseMult(&public, &private)
+
+	// Put data into our keypair struct
+	djbECPub := NewDjbECPublicKey(public)
+	djbECPriv := NewDjbECPrivateKey(private)
+	keypair := NewECKeyPair(djbECPub, djbECPriv)
+
+	logger.Debug("Returning keypair: ", keypair)
+	return keypair
 }
 
 // GenerateKeyPair returns an EC Key Pair.
 func GenerateKeyPair() (*ECKeyPair, error) {
-	logger.Debug("Generating EC Key Pair...")
+	// logger.Debug("Generating EC Key Pair...")
 	// Get cryptographically secure random numbers.
 	random := rand.Reader
 
@@ -55,7 +78,7 @@ func GenerateKeyPair() (*ECKeyPair, error) {
 	djbECPriv := NewDjbECPrivateKey(private)
 	keypair := NewECKeyPair(djbECPub, djbECPriv)
 
-	logger.Debug("Returning keypair: ", keypair)
+	// logger.Debug("Returning keypair: ", keypair)
 
 	return keypair, nil
 }
@@ -67,19 +90,6 @@ func VerifySignature(signingKey ECPublicKeyable, message []byte, signature [64]b
 	valid := verify(publicKey, message, &signature)
 	logger.Debug("Signature valid: ", valid)
 	return valid
-}
-
-// VerifySignatureAsync verifies that a message was signed with the given key asyncronously.
-func VerifySignatureAsync(signingKey ECPublicKeyable, message []byte, signature [64]byte, completion complete.Completionable) {
-	go func() {
-		r := VerifySignature(signingKey, message, signature)
-		if r == false {
-			completion.OnFailure("Signature invalid")
-			return
-		}
-		result := complete.NewResult(r)
-		completion.OnSuccess(&result)
-	}()
 }
 
 // CalculateSignature signs a message with the given private key.
@@ -96,17 +106,4 @@ func CalculateSignature(signingKey ECPrivateKeyable, message []byte) [64]byte {
 	// Sign the message.
 	signature := sign(&privateKey, message, random)
 	return *signature
-}
-
-// CalculateSignatureAsync signs a message with the given private key asyncronously.
-func CalculateSignatureAsync(signingKey ECPrivateKeyable, message []byte, completion complete.Completionable) {
-	go func() {
-		signature := CalculateSignature(signingKey, message)
-		if signature == [64]byte{} {
-			completion.OnFailure("Error calculating signature")
-			return
-		}
-		result := complete.NewResult(signature)
-		completion.OnSuccess(&result)
-	}()
 }

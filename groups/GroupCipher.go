@@ -1,14 +1,15 @@
 package groups
 
 import (
-	"errors"
-	"github.com/RadicalApp/libsignal-protocol-go/cipher"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/groups/ratchet"
-	"github.com/RadicalApp/libsignal-protocol-go/groups/state/record"
-	"github.com/RadicalApp/libsignal-protocol-go/groups/state/store"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"strconv"
+	"fmt"
+
+	"github.com/arugaz/libsignal/cipher"
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/groups/ratchet"
+	"github.com/arugaz/libsignal/groups/state/record"
+	"github.com/arugaz/libsignal/groups/state/store"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/signalerror"
 )
 
 // NewGroupCipher will return a new group message cipher that can be used for
@@ -33,7 +34,7 @@ type GroupCipher struct {
 }
 
 // Encrypt will take the given message in bytes and return encrypted bytes.
-func (c *GroupCipher) Encrypt(plaintext []byte) (protocol.CiphertextMessage, error) {
+func (c *GroupCipher) Encrypt(plaintext []byte) (protocol.GroupCiphertextMessage, error) {
 	// Load the sender key based on id from our store.
 	keyRecord := c.senderKeyStore.LoadSenderKey(c.senderKeyID)
 	senderKeyState, err := keyRecord.SenderKeyState()
@@ -48,7 +49,7 @@ func (c *GroupCipher) Encrypt(plaintext []byte) (protocol.CiphertextMessage, err
 	}
 
 	// Encrypt the plaintext.
-	ciphertext, err := cipher.Encrypt(senderKey.Iv(), senderKey.CipherKey(), plaintext)
+	ciphertext, err := cipher.EncryptCbc(senderKey.Iv(), senderKey.CipherKey(), plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +74,7 @@ func (c *GroupCipher) Decrypt(senderKeyMessage *protocol.SenderKeyMessage) ([]by
 	keyRecord := c.senderKeyStore.LoadSenderKey(c.senderKeyID)
 
 	if keyRecord.IsEmpty() {
-		return nil, errors.New("No sender key for: " + c.senderKeyID.GroupID())
+		return nil, fmt.Errorf("%w for %s in %s", signalerror.ErrNoSenderKeyForUser, c.senderKeyID.Sender().String(), c.senderKeyID.GroupID())
 	}
 
 	// Get the senderkey state by id.
@@ -85,7 +86,7 @@ func (c *GroupCipher) Decrypt(senderKeyMessage *protocol.SenderKeyMessage) ([]by
 	// Verify the signature of the senderkey message.
 	verified := c.verifySignature(senderKeyState.SigningKey().PublicKey(), senderKeyMessage)
 	if !verified {
-		return nil, errors.New("Sender Key State failed verification with given pub key!")
+		return nil, signalerror.ErrSenderKeyStateVerificationFailed
 	}
 
 	senderKey, err := c.getSenderKey(senderKeyState, senderKeyMessage.Iteration())
@@ -94,7 +95,7 @@ func (c *GroupCipher) Decrypt(senderKeyMessage *protocol.SenderKeyMessage) ([]by
 	}
 
 	// Decrypt the message ciphertext.
-	plaintext, err := cipher.Decrypt(senderKey.Iv(), senderKey.CipherKey(), senderKeyMessage.Ciphertext())
+	plaintext, err := cipher.DecryptCbc(senderKey.Iv(), senderKey.CipherKey(), senderKeyMessage.Ciphertext())
 	if err != nil {
 		return nil, err
 	}
@@ -119,13 +120,11 @@ func (c *GroupCipher) getSenderKey(senderKeyState *record.SenderKeyState, iterat
 		if senderKeyState.HasSenderMessageKey(iteration) {
 			return senderKeyState.RemoveSenderMessageKey(iteration), nil
 		}
-		i1 := strconv.Itoa(int(senderChainKey.Iteration()))
-		i2 := strconv.Itoa(int(iteration))
-		return nil, errors.New("Received message with old counter: " + i1 + ", " + i2)
+		return nil, fmt.Errorf("%w (current: %d, received: %d)", signalerror.ErrOldCounter, senderChainKey.Iteration(), iteration)
 	}
 
 	if iteration-senderChainKey.Iteration() > 2000 {
-		return nil, errors.New("Over 2000 messages into the future!")
+		return nil, signalerror.ErrTooFarIntoFuture
 	}
 
 	for senderChainKey.Iteration() < iteration {

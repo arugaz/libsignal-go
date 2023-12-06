@@ -3,13 +3,15 @@
 package ratchet
 
 import (
-	"encoding/base64"
 	"encoding/binary"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/kdf"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/chain"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/root"
-	"github.com/RadicalApp/libsignal-protocol-go/keys/session"
+
+	"github.com/cristalhq/base64"
+
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/kdf"
+	"github.com/arugaz/libsignal/keys/chain"
+	"github.com/arugaz/libsignal/keys/root"
+	"github.com/arugaz/libsignal/keys/session"
 )
 
 var b64 = base64.StdEncoding.EncodeToString
@@ -29,7 +31,7 @@ func CalculateSenderSession(parameters *SenderParameters) (*session.KeyPair, err
 	var secret [32]byte
 	var publicKey [32]byte
 	var privateKey [32]byte
-	masterSecret := make([]byte, 0, 32*5) // Create a master shared secret that is 5 different 32-byte values
+	masterSecret := []byte{} // Create a master shared secret that is 5 different 32-byte values
 	discontinuity := genDiscontinuity()
 	masterSecret = append(masterSecret, discontinuity[:]...)
 
@@ -74,7 +76,7 @@ func CalculateSenderSession(parameters *SenderParameters) (*session.KeyPair, err
 	}
 
 	// Derive the root and chain keys based on the master secret.
-	derivedKeysBytes, err := kdf.DeriveSecrets(masterSecret, nil, []byte(root.KdfInfo), root.DerivedSecretsSize)
+	derivedKeysBytes, err := kdf.DeriveSecrets(masterSecret, nil, []byte("WhisperText"), root.DerivedSecretsSize)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +96,8 @@ func CalculateReceiverSession(parameters *ReceiverParameters) (*session.KeyPair,
 	var secret [32]byte
 	var publicKey [32]byte
 	var privateKey [32]byte
-	masterSecret := make([]byte, 0, 32*5) // Create a master shared secret that is 5 different 32-byte values
+	masterSecret := []byte{} // Create a master shared secret that is 5 different 32-byte values
+
 	discontinuity := genDiscontinuity()
 	masterSecret = append(masterSecret, discontinuity[:]...)
 
@@ -139,7 +142,7 @@ func CalculateReceiverSession(parameters *ReceiverParameters) (*session.KeyPair,
 	}
 
 	// Derive the root and chain keys based on the master secret.
-	derivedKeysBytes, err := kdf.DeriveSecrets(masterSecret, nil, []byte(root.KdfInfo), root.DerivedSecretsSize)
+	derivedKeysBytes, err := kdf.DeriveSecrets(masterSecret, nil, []byte("WhisperText"), root.DerivedSecretsSize)
 	if err != nil {
 		return nil, err
 	}

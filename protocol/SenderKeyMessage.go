@@ -1,10 +1,11 @@
 package protocol
 
 import (
-	"errors"
-	"github.com/RadicalApp/libsignal-protocol-go/ecc"
-	"github.com/RadicalApp/libsignal-protocol-go/util/bytehelper"
-	"strconv"
+	"fmt"
+
+	"github.com/arugaz/libsignal/ecc"
+	"github.com/arugaz/libsignal/signalerror"
+	"github.com/arugaz/libsignal/util/bytehelper"
 )
 
 // SenderKeyMessageSerializer is an interface for serializing and deserializing
@@ -36,20 +37,17 @@ func NewSenderKeyMessageFromStruct(structure *SenderKeyMessageStructure,
 
 	// Throw an error if the given message structure is an unsupported version.
 	if structure.Version <= UnsupportedVersion {
-		err := "Legacy message: " + strconv.Itoa(int(structure.Version))
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w %d (sender key message)", signalerror.ErrOldMessageVersion, structure.Version)
 	}
 
 	// Throw an error if the given message structure is a future version.
 	if structure.Version > CurrentVersion {
-		err := "Unknown version: " + strconv.Itoa(int(structure.Version))
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w %d (sender key message)", signalerror.ErrUnknownMessageVersion, structure.Version)
 	}
 
 	// Throw an error if the structure is missing critical fields.
 	if structure.CipherText == nil {
-		err := "Incomplete message."
-		return nil, errors.New(err)
+		return nil, fmt.Errorf("%w (sender key message)", signalerror.ErrIncompleteMessage)
 	}
 
 	// Create the signal message object from the structure.

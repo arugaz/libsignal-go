@@ -33,7 +33,7 @@ func toString(a ...interface{}) string {
 // EnsureLogger will use the default logger if one was not set up.
 func ensureLogger() {
 	if Logger == nil {
-		fmt.Println("Error: No logger was configured. Use `logger.Setup` to configure a logger.")
+		// fmt.Println("Error: No logger was configured. Use `logger.Setup` to configure a logger.")
 		Logger = &defaultLogger{}
 	}
 }

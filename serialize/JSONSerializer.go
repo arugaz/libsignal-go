@@ -1,11 +1,12 @@
 package serialize
 
 import (
-	"encoding/json"
-	groupRecord "github.com/RadicalApp/libsignal-protocol-go/groups/state/record"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
-	"github.com/RadicalApp/libsignal-protocol-go/protocol"
-	"github.com/RadicalApp/libsignal-protocol-go/state/record"
+	"github.com/goccy/go-json"
+
+	groupRecord "github.com/arugaz/libsignal/groups/state/record"
+	"github.com/arugaz/libsignal/logger"
+	"github.com/arugaz/libsignal/protocol"
+	"github.com/arugaz/libsignal/state/record"
 )
 
 // NewJSONSerializer will return a serializer for all Signal objects that will
@@ -37,7 +38,7 @@ func (j *JSONSignalMessageSerializer) Serialize(signalMessage *protocol.SignalMe
 	if err != nil {
 		logger.Error("Error serializing signal message: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -64,7 +65,7 @@ func (j *JSONPreKeySignalMessageSerializer) Serialize(signalMessage *protocol.Pr
 	if err != nil {
 		logger.Error("Error serializing prekey signal message: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -91,7 +92,7 @@ func (j *JSONSignedPreKeyRecordSerializer) Serialize(signedPreKey *record.Signed
 	if err != nil {
 		logger.Error("Error serializing signed prekey record: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -118,7 +119,7 @@ func (j *JSONPreKeyRecordSerializer) Serialize(preKey *record.PreKeyStructure) [
 	if err != nil {
 		logger.Error("Error serializing prekey record: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -172,7 +173,7 @@ func (j *JSONSessionSerializer) Serialize(session *record.SessionStructure) []by
 	if err != nil {
 		logger.Error("Error serializing session: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -200,7 +201,7 @@ func (j *JSONSenderKeyDistributionMessageSerializer) Serialize(message *protocol
 	if err != nil {
 		logger.Error("Error serializing senderkey distribution message: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -228,7 +229,7 @@ func (j *JSONSenderKeyMessageSerializer) Serialize(message *protocol.SenderKeyMe
 	if err != nil {
 		logger.Error("Error serializing senderkey distribution message: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -256,7 +257,7 @@ func (j *JSONSenderKeyStateSerializer) Serialize(state *groupRecord.SenderKeySta
 	if err != nil {
 		logger.Error("Error serializing session state: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
@@ -283,7 +284,7 @@ func (j *JSONSenderKeySessionSerializer) Serialize(session *groupRecord.SenderKe
 	if err != nil {
 		logger.Error("Error serializing session: ", err)
 	}
-	logger.Debug("Serialize result: ", string(serialized))
+	// logger.Debug("Serialize result: ", string(serialized))
 
 	return serialized
 }
